@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 
 from models.auth_models import LoginForm, RegisterForm, AuthResponse
 from database import test_collection
+from pymongo.errors import DuplicateKeyError
 
 auth_router = APIRouter()
 
@@ -71,7 +72,29 @@ class TestAdd( BaseModel):
 def test_add(data:TestAdd):
 
     our_data_in_dictionary_format=data.model_dump();
-
-    test_collection.insert_one(our_data_in_dictionary_format)
+    try:
+        test_collection.insert_one(our_data_in_dictionary_format)
+    except DuplicateKeyError:
+        raise HTTPException(
+            status_code=409,
+            detail="This email already exists!"      
+        )
 
     print("testing adding an item")
+
+@auth_router.post("/test_find")
+def test_find(data:TestAdd):
+
+    result=test_collection.find_one({
+        "email": data.email
+    })
+
+    print(result)
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Item not found "
+        )
+    return "found item" 
+    
